@@ -1,0 +1,9 @@
+{
+  "name": "mcp-aux",
+  "version": "1.0.0",
+  "description": "One MCP tool that runs many programs, so they stop costing context.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": { "@modelcontextprotocol/sdk": "^1.15.0" }
+}
