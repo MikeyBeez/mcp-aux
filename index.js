@@ -33,7 +33,8 @@ const AUX = path.join(os.homedir(), 'Code/harness/aux.py');
 
 const DESC =
   'Run one of the maintenance and audit programs that do NOT live in memory as tools of their own. ' +
-  'START WITH op="list" — it returns every program, what it is for, and which machine it runs on; ' +
+  'START WITH op="find" AND A PLAIN-LANGUAGE query — it returns only the few entries that match, with the argument names needed to call them, so one round trip answers both which tool and how to call it. ' +
+  'op="list" returns the whole catalogue when you would rather read everything; ' +
   'that catalogue is pulled on demand rather than occupying context on every turn, which is the whole point of this server. ' +
   'The programs cover documentation regeneration, contract and schema checks, protocol integrity, memory audits and embeddings, ' +
   'the test suite, and pop\'s GPU state. ' +
@@ -52,7 +53,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       properties: {
         // `name` first, and named `name`, so the ledger's targetOf() picks it up.
         name: { type: 'string', description: 'Which program to run or describe. Omit only with op="list". Get the list from op="list".' },
-        op:   { type: 'string', enum: ['run', 'list', 'describe'], description: '"run" (default) executes it; "list" returns the catalogue; "describe" returns one program in full, including exactly which arguments it takes.' },
+        op:   { type: 'string', enum: ['run', 'find', 'list', 'describe'], description: '"run" (default) executes it; "find" searches by meaning — pass `query` — and is the cheap way in; "list" returns the whole catalogue; "describe" returns one program or server in full, including exactly which arguments it takes.' },
+        query: { type: 'string', description: 'For op="find": what you are trying to do, in plain words, e.g. "is the documentation still true" or "what is holding the GPU". Searches program purposes and the collapsed servers\' LIVE tool lists. An honest empty result means nothing matched — it does not guess.' },
         args: { type: 'object', description: 'Program arguments as plain key/value pairs, e.g. {"mode":"check"} or {"op":"similar","text":"the hammer"}. Validated against the registry — an unknown key is an error that names the accepted ones, never a silent no-op. Use op="describe" to see them.' },
       },
     },
@@ -63,6 +65,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const a = req.params.arguments || {};
   const op = a.op || (a.name ? 'run' : 'list');
   const argv = [AUX, op];
+  // find takes its query as trailing words, the way the CLI reads it.
+  if (op === 'find' && args && args.query) argv.push(String(args.query));
   if (op !== 'list') {
     if (!a.name) return json({ ok: false, error: 'name is required for op="' + op + '". Call op="list" to see what exists.' });
     argv.push(a.name);
