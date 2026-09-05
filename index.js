@@ -9,9 +9,11 @@
 // generators and audits in ~/Code/harness that fired only when a human remembered.
 //
 // THIS FILE DELIBERATELY CONTAINS NO LOGIC. Dispatch, validation, host rules and the
-// registry all live in ~/Code/harness/aux.py, which runs identically on Schmooey and on
-// pop. pop has no node, so the MCP face exists only here while the CORE is shared. The
-// thing that could drift is the logic, so there is exactly one copy of it.
+// registry all live in aux.py, which runs identically on both machines. The second
+// machine has python but no node, so the MCP face exists only on the first while the
+// CORE is shared byte-for-byte. The thing that could drift is the logic, so there is
+// exactly one copy of it. See DESIGN.md -- the core is described there rather than
+// published, because it lives in a private repo full of real paths and machine names.
 //
 // WHY `name` IS THE FIRST PARAMETER: ledger_log.mjs logs every span with
 // meta.target = targetOf(args), and targetOf returns the first present of
