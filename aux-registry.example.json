@@ -1,0 +1,104 @@
+{
+  "_comment": "Example registry for the auxiliary runner. Two namespaces: `programs` are things that were never MCP tools (they cost zero context before and after; exposing them here makes them callable without making them present), and `servers` are whole MCP servers that used to be wired individually and are now reached as alias.tool. Program ids never contain a dot, so a dotted name is unambiguously server.tool -- no precedence rule needed. Paths use $HOME; the real registry is machine-specific.",
+
+  "programs": {
+
+    "regen": {
+      "_note": "Simplest useful shape: a choice argument mapped to a command-line switch. `flag` maps the VALUE to the switch, so choices and argv stay in one place.",
+      "purpose": "Run every documentation generator and report which outputs changed.",
+      "host": "any",
+      "cwd": "$HOME/Code/harness",
+      "cmd": ["node", "regen.mjs"],
+      "args": {
+        "mode": {
+          "choices": ["write", "check"],
+          "default": "check",
+          "flag": { "write": "--write" },
+          "help": "check reports what would change; write actually writes it."
+        }
+      }
+    },
+
+    "sync-check": {
+      "_note": "Same shape, plus an explicit timeout. A program that shells out to another machine needs longer than the default.",
+      "purpose": "Are the files that exist on BOTH machines actually identical? Compares sha256 of the shared files. A rule nobody can check is a rule that quietly stops being true.",
+      "host": "mac",
+      "cwd": "$HOME/Code/harness",
+      "cmd": ["bash", "sync.sh"],
+      "timeout_s": 120,
+      "args": {
+        "fix": {
+          "choices": ["no", "yes"],
+          "default": "no",
+          "flag": { "yes": "--push" },
+          "help": "yes copies the owner machine's copies over and re-checks."
+        }
+      }
+    },
+
+    "gpu": {
+      "_note": "host is the whole point here. Declared for the GPU box, so calling it from the laptop REFUSES with the ssh command rather than reporting confidently about the wrong machine.",
+      "purpose": "What is holding the GPU right now, and how much is free. Run this before any GPU experiment.",
+      "host": "gpubox",
+      "cwd": "$HOME",
+      "cmd": ["bash", "-c", "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv"],
+      "args": {}
+    },
+
+    "memory-engrams": {
+      "_note": "Two arguments of different shapes: a choice passed as --op VALUE (no `flag`, so it becomes a --key value pair), and a free-text positional. `optional` means it may be omitted entirely.",
+      "purpose": "Embeddings for stored memories: backfill, find near-duplicates, or search by meaning.",
+      "host": "mac",
+      "cwd": "$HOME/Code/harness",
+      "cmd": ["python3", "engrams.py"],
+      "timeout_s": 600,
+      "args": {
+        "op": {
+          "choices": ["backfill", "dupes", "similar"],
+          "default": "dupes",
+          "help": "backfill embeds anything new; dupes lists near-identical pairs; similar needs text."
+        },
+        "text": {
+          "optional": true,
+          "positional": true,
+          "help": "the query, for op=similar."
+        }
+      }
+    },
+
+    "schema-check": {
+      "_note": "No arguments at all. `args: {}` is not a placeholder -- it means any argument passed is an error naming what is accepted, rather than a silent no-op.",
+      "purpose": "Does every handler read the arguments its own schema declares? Catches the permanent-silent-null bug.",
+      "host": "mac",
+      "cwd": "$HOME/Code/harness",
+      "cmd": ["node", "schema_check.mjs"],
+      "args": {}
+    }
+  },
+
+  "_servers_comment": "Collapsed MCP servers. The runner spawns these on demand, speaks MCP over stdio, calls one tool, and exits. Their tool schemas are NOT carried in context -- ask with op=describe, or let op=find search their live tool lists.",
+
+  "servers": {
+
+    "random": {
+      "purpose": "Dice, coin flips, shuffles, samples, UUIDs, weighted choice, normal and uniform draws.",
+      "cmd": ["node", "$HOME/Code/mcp-random/dist/index.js"]
+    },
+
+    "math": {
+      "purpose": "Number theory and algebra: primes, factoring, p-adic valuation, resultants, discriminants, group orbits.",
+      "cmd": ["node", "$HOME/Code/mcp-math/dist/index.js"]
+    },
+
+    "database": {
+      "purpose": "SQLite: connect, query, schema, tables, insert/update/delete, transactions.",
+      "cmd": ["node", "$HOME/Code/mcp-database/dist/index.js"],
+      "timeout_s": 90
+    },
+
+    "projects": {
+      "purpose": "Find projects on disk: locate, list, recent, and per-project info.",
+      "cmd": ["node", "$HOME/Code/mcp-projects/dist/index.js"]
+    }
+  }
+}
