@@ -65,9 +65,16 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const a = req.params.arguments || {};
   const op = a.op || (a.name ? 'run' : 'list');
   const argv = [AUX, op];
-  // find takes its query as trailing words, the way the CLI reads it.
-  if (op === 'find' && args && args.query) argv.push(String(args.query));
-  if (op !== 'list') {
+  // find takes its query as trailing words, the way the CLI reads it, and takes
+  // NO name -- so it must be handled before the name guard, not alongside it.
+  // Both halves of that were wrong from 2026-08-31 until 2026-09-05: this read
+  // `args.query` off an undefined `args` (the arguments are in `a`), which threw
+  // ReferenceError on every call, and the guard below then demanded a name that
+  // find is documented not to take. Nobody noticed for five days because nothing
+  // called it -- which is itself the ergonomics finding.
+  if (op === 'find') {
+    if (a.query) argv.push(String(a.query));
+  } else if (op !== 'list') {
     if (!a.name) return json({ ok: false, error: 'name is required for op="' + op + '". Call op="list" to see what exists.' });
     argv.push(a.name);
   }
